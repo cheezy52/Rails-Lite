@@ -7,20 +7,28 @@ class Params
   # 3. route params
   def initialize(req, route_params = {})
     @req = req
-    @params = parse_www_encoded_form(req.query_string)
+    @params = route_params
+    parse_www_encoded_form(req.query_string)
+    @permitted_keys = []
   end
 
   def [](key)
-    @params[key]
+    raise "invalid param" unless key.class == String || key.class == Symbol
+    @params[key.to_s]
   end
 
   def permit(*keys)
+    keys.each do |key|
+      @permitted_keys << key
+    end
   end
 
   def require(key)
+    raise AttributeNotFoundError unless @params.include?(key)
   end
 
   def permitted?(key)
+    @permitted_keys.include?(key)
   end
 
   def to_s
@@ -36,7 +44,6 @@ class Params
   # should return
   # { "user" => { "address" => { "street" => "main", "zip" => "89436" } } }
   def parse_www_encoded_form(www_encoded_form)
-    @params = {}
     keyval_arrays = []
 
     keyval_arrays += URI.decode_www_form(www_encoded_form) unless www_encoded_form.nil?
@@ -49,8 +56,6 @@ class Params
       state = @params
       address_params(state, nested_param)
     end
-
-    p @params
     @params
   end
 
